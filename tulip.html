@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taman Tulip</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #cfe9ff; font-family: sans-serif; }
+  canvas { display: block; width: 100%; height: 100%; }
+  #hint { position: fixed; top: 10px; left: 0; right: 0; text-align: center; color: #fff;
+          text-shadow: 0 1px 4px rgba(0,0,0,.4); font-size: 14px; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hint">🌷 Sentuh tanah hijau untuk menanam tulip</div>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, dpr;
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  W = canvas.clientWidth; H = canvas.clientHeight;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+const palettes = [
+  ['#ff4d6d', '#c9184a'], ['#ffb703', '#fb8500'], ['#f72585', '#b5179e'],
+  ['#ffffff', '#e0d7f5'], ['#9b5de5', '#6a2fb5'], ['#ff758f', '#d6336c'],
+  ['#ffd60a', '#e0a800'], ['#ff6b35', '#d62828']
+];
+
+class Tulip {
+  constructor(x, delay = 0) {
+    this.x = x;
+    this.baseY = H - 20 - Math.random() * (H * 0.18);
+    this.scale = 0.55 + (this.baseY / H) * 0.7;
+    this.height = (90 + Math.random() * 90) * this.scale;
+    this.pal = palettes[Math.floor(Math.random() * palettes.length)];
+    this.phase = Math.random() * Math.PI * 2;
+    this.t = -delay;
+    this.speed = 0.4 + Math.random() * 0.3;
+  }
+  draw(time, dt) {
+    this.t += dt * this.speed;
+    if (this.t <= 0) return;
+    const grow = Math.min(this.t, 1);               // batang tumbuh
+    const bloom = Math.min(Math.max(this.t - 0.8, 0) / 1.2, 1); // mekar
+    const eg = 1 - Math.pow(1 - grow, 3);
+    const eb = 1 - Math.pow(1 - bloom, 3);
+    const sway = Math.sin(time * 1.3 + this.phase) * 6 * this.scale;
+    const h = this.height * eg;
+    const topX = this.x + sway, topY = this.baseY - h;
+
+    // batang
+    ctx.strokeStyle = '#2d8a3e';
+    ctx.lineWidth = 3.5 * this.scale;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(this.x, this.baseY);
+    ctx.quadraticCurveTo(this.x, this.baseY - h * 0.5, topX, topY);
+    ctx.stroke();
+
+    // daun
+    ctx.fillStyle = '#3aa655';
+    for (const dir of [-1, 1]) {
+      const ly = this.baseY - h * 0.15, lh = h * 0.6;
+      ctx.beginPath();
+      ctx.moveTo(this.x, ly);
+      ctx.quadraticCurveTo(this.x + dir * 28 * this.scale + sway * 0.3, ly - lh * 0.4,
+                           this.x + dir * 10 * this.scale + sway * 0.6, ly - lh);
+      ctx.quadraticCurveTo(this.x + dir * 4 * this.scale, ly - lh * 0.4, this.x, ly);
+      ctx.fill();
+    }
+
+    // bunga
+    const s = this.scale * (0.35 + 0.65 * eg);
+    const open = eb * 14 * s;     // seberapa terbuka kelopak
+    const fh = 46 * s, fw = 20 * s;
+    ctx.save();
+    ctx.translate(topX, topY);
+    ctx.rotate(sway * 0.01);
+    const petal = (dx, rot, color) => {
+      ctx.save();
+      ctx.translate(0, 0);
+      ctx.rotate(rot);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(0, 4 * s);
+      ctx.bezierCurveTo(-fw + dx, -fh * 0.1, -fw * 0.7 + dx, -fh * 0.9, dx, -fh);
+      ctx.bezierCurveTo(fw * 0.7 + dx, -fh * 0.9, fw + dx, -fh * 0.1, 0, 4 * s);
+      ctx.fill();
+      ctx.restore();
+    };
+    const r = open * 0.035;
+    petal(0, -r * 2.2, this.pal[1]);
+    petal(0, r * 2.2, this.pal[1]);
+    petal(0, 0, this.pal[0]);
+    // kilau
+    ctx.fillStyle = 'rgba(255,255,255,.25)';
+    ctx.beginPath();
+    ctx.ellipse(-fw * 0.25, -fh * 0.45, fw * 0.12, fh * 0.28, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+let tulips = [];
+
+function plantAt(e) {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  // hanya bisa menanam di tanah hijau (di bawah garis rumput)
+  const groundY = H * 0.82 + Math.sin(x * 0.01 + 1) * 8;
+  if (y < groundY) return;
+  const t = new Tulip(x);
+  // bunga tumbuh tepat di titik yang disentuh (dasar batang di posisi sentuh)
+  t.baseY = Math.min(y, H - 10);
+  t.scale = 0.55 + (t.baseY / H) * 0.7;
+  t.height = (90 + Math.random() * 90) * t.scale;
+  tulips.push(t);
+  tulips.sort((a, b) => a.baseY - b.baseY);
+  document.getElementById('hint').style.opacity = 0;
+}
+canvas.addEventListener('pointerdown', plantAt);
+
+// kelopak melayang
+const petals = Array.from({ length: 25 }, () => ({
+  x: Math.random() * W, y: Math.random() * H, r: 2 + Math.random() * 3,
+  vx: 0.2 + Math.random() * 0.5, vy: 0.2 + Math.random() * 0.4
+}));
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min((now - last) / 1000, 0.05);
+  last = now;
+  const time = now / 1000;
+
+  // langit
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, '#9fd3ff'); sky.addColorStop(0.6, '#e6f4ff'); sky.addColorStop(1, '#fdf1d8');
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+
+  // matahari
+  const sun = ctx.createRadialGradient(W * 0.85, H * 0.15, 5, W * 0.85, H * 0.15, 90);
+  sun.addColorStop(0, 'rgba(255,245,200,1)'); sun.addColorStop(1, 'rgba(255,245,200,0)');
+  ctx.fillStyle = sun; ctx.fillRect(0, 0, W, H);
+
+  // tanah / rumput
+  const grass = ctx.createLinearGradient(0, H * 0.7, 0, H);
+  grass.addColorStop(0, '#7ccf6e'); grass.addColorStop(1, '#3f9a4a');
+  ctx.fillStyle = grass;
+  ctx.beginPath();
+  ctx.moveTo(0, H * 0.82);
+  for (let x = 0; x <= W; x += 20) ctx.lineTo(x, H * 0.82 + Math.sin(x * 0.01 + 1) * 8);
+  ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.fill();
+
+  for (const t of tulips) t.draw(time, dt);
+
+  // kelopak melayang
+  ctx.fillStyle = 'rgba(255,255,255,.7)';
+  for (const p of petals) {
+    p.x += p.vx; p.y += p.vy + Math.sin(time + p.x * 0.02) * 0.3;
+    if (p.x > W) p.x = -5;
+    if (p.y > H) p.y = -5;
+    ctx.beginPath(); ctx.ellipse(p.x, p.y, p.r, p.r * 0.6, time, 0, Math.PI * 2); ctx.fill();
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

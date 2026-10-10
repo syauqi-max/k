@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Lamp Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="room" id="room">
+    <div class="room-light" id="roomLight"></div>
+    <div class="fireflies" id="fireflies"></div>
+
+    <section class="lamp-side">
+      <div class="lamp-container" id="lampContainer">
+        <div class="lamp-glow"></div>
+        <div class="lamp-head"></div>
+        <div class="light-beam"></div>
+        <div class="lamp-stem"></div>
+        <div class="lamp-base"></div>
+        <div class="desk-surface"></div>
+
+        <svg class="string-svg" aria-hidden="true">
+          <path id="stringPath" d="M 0 0 L 0 80"></path>
+        </svg>
+
+        <div class="string-handle" id="stringHandle" aria-label="Pull lamp string"></div>
+      </div>
+
+    </section>
+
+    <section class="login-side">
+      <form class="glass login-card" id="loginForm">
+        <div class="glass-line"></div>
+
+        <div class="login-heading">
+          <h2>Hallo Sayang🤍</h2>
+          <p>Masukkin kode unik kita berdua</p>
+        </div>
+
+        <div class="inputs">
+          <label class="input-wrap" id="passwordWrap">
+            <span class="input-icon lock-icon" aria-hidden="true"></span>
+            <input type="password" id="passwordInput" placeholder="apa ya kodenya🤔 (4 digit)" autocomplete="current-password">
+          </label>
+        </div>
+
+        <p class="error-msg" id="errorMsg">Kode salah. Coba lagi.</p>
+
+        <button class="sign-in" type="submit">Masuk</button>
+      </form>
+    </section>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
